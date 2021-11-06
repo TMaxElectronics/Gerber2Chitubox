@@ -1,6 +1,7 @@
 package g2c.application;
 
 import java.awt.Color;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JCheckBox;
@@ -26,6 +27,10 @@ public class LayerListObject extends JCheckBox{
 	
 	public BufferedImage getImage() {
 		return gerber.getImage();
+	}
+	
+	public BufferedImage getCorrectedImage() {
+		return gerber.getCorrectedImage();
 	}
 	
 	public void setColor(Color c) {
@@ -55,5 +60,9 @@ public class LayerListObject extends JCheckBox{
 
 	public void setName(String newName) {
 		this.name = newName;
+	}
+
+	public void applyCorrection(double xOffset, double yOffset, int angle) {
+		gerber.applyCorrection(xOffset, yOffset, angle);
 	}
 }

@@ -140,38 +140,7 @@ public class PhotonLayerImage extends JPanel {
                     columnNumber++;
                 }
             }
-
-/*
-            if (rootLayer) {
-                g.setColor(Color.decode("#008800"));
-                int columnNumber = 0;
-                for (BitSet column : layer.getSupportedRows()) {
-                    drawDot(g, columnNumber, column);
-                    columnNumber++;
-                }
-            } else {
-                int columnNumber = 0;
-                g.setColor(Color.decode("#008800"));
-                for (BitSet column : layer.getSupportedRows()) {
-                    drawDot(g, columnNumber, column);
-                    columnNumber++;
-                }
-
-                columnNumber = 0;
-                g.setColor(Color.decode("#FFFF00"));
-                for (BitSet column : layer.getUnSupportedRows()) {
-                    drawDot(g, columnNumber, column);
-                    columnNumber++;
-                }
-
-                columnNumber = 0;
-                g.setColor(Color.decode("#FF0000"));
-                for (BitSet column : layer.getIslandRows()) {
-                    drawDot(g, columnNumber, column);
-                    columnNumber++;
-                }
-            }
-*/
+            
             g.dispose();
         }
     }
@@ -180,15 +149,6 @@ public class PhotonLayerImage extends JPanel {
         if (!column.isEmpty()) {
             for (int i = column.nextSetBit(0); i >= 0; i = column.nextSetBit(i + 1)) {
                 g.drawLine(columnNumber, i, columnNumber, i);
-            }
-        }
-    }
-
-    private void drawCross(Graphics2D g, int columnNumber, BitSet column) {
-        if (!column.isEmpty()) {
-            for (int i = column.nextSetBit(0); i >= 0; i = column.nextSetBit(i + 1)) {
-                g.drawLine(columnNumber, 0, columnNumber, height - 1);
-                g.drawLine(0, i, width - 1, i);
             }
         }
     }

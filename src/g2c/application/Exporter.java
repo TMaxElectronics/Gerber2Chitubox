@@ -26,6 +26,7 @@ import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormSpecs;
 import com.jgoodies.forms.layout.RowSpec;
 
+import g2c.gerber.loader.GerberLoader;
 import photon.file.PhotonFile;
 import photon.file.parts.PhotonFileLayer;
 import photon.file.parts.PhotonFilePreview;
@@ -50,12 +51,15 @@ public class Exporter {
 	JSpinner expTime = new JSpinner();
 	PhotonFile exp = new PhotonFile(Main.currPrinter);
 	PhotonLayerImage panel;
-	JCheckBox chckbxNewCheckBox = new JCheckBox("Mirror Layer");
+	JCheckBox mirrorLayer = new JCheckBox("Mirror Layer");
 	JComboBox typeBox = new JComboBox();
 	JComboBox<LayerListObject> drillOLBox = new JComboBox<LayerListObject>();
 	JCheckBox chckbxOverrideHoleDiameter = new JCheckBox("Override Hole diameter");
 	JSpinner newHoleDiam = new JSpinner();
 	JLabel newHoleDiamMMLBL = new JLabel("mm");
+	JSpinner rotation = new JSpinner();
+	JSpinner offsetY = new JSpinner();
+	JSpinner offsetX = new JSpinner();
 	
 	/**
 	 * Initialize the contents of the frame.
@@ -63,7 +67,7 @@ public class Exporter {
 	public Exporter(LayerListObject layer) {
 		this.layer = layer;
 		frame = new JFrame();
-		frame.setBounds(100, 100, 824, 452);
+		frame.setBounds(100, 100, 824, 467);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		frame.getContentPane().setLayout(new FormLayout(new ColumnSpec[] {
 				FormSpecs.UNRELATED_GAP_COLSPEC,
@@ -92,8 +96,12 @@ public class Exporter {
 				RowSpec.decode("22px"),
 				FormSpecs.UNRELATED_GAP_ROWSPEC,
 				RowSpec.decode("22px"),
-				FormSpecs.RELATED_GAP_ROWSPEC,
+				FormSpecs.UNRELATED_GAP_ROWSPEC,
 				RowSpec.decode("23px"),
+				FormSpecs.UNRELATED_GAP_ROWSPEC,
+				FormSpecs.DEFAULT_ROWSPEC,
+				FormSpecs.UNRELATED_GAP_ROWSPEC,
+				FormSpecs.DEFAULT_ROWSPEC,
 				RowSpec.decode("161px:grow"),
 				RowSpec.decode("22px"),
 				FormSpecs.UNRELATED_GAP_ROWSPEC,
@@ -121,14 +129,51 @@ public class Exporter {
 				}
 			}
 		});
-		frame.getContentPane().add(btnSave, "4, 12, fill, top");
+		
+		JLabel lblNewLabel_1_1_2 = new JLabel("Offsets (mm):");
+		frame.getContentPane().add(lblNewLabel_1_1_2, "6, 10, 3, 1");
+		
+		JLabel lblNewLabel_1_1_3 = new JLabel("x");
+		lblNewLabel_1_1_3.setHorizontalAlignment(SwingConstants.TRAILING);
+		frame.getContentPane().add(lblNewLabel_1_1_3, "10, 10");
+		offsetX.setModel(new SpinnerNumberModel(new Double(0), new Double(0), null, new Double(1)));
+		offsetX.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				updatePreview();
+			}
+		});
+
+		frame.getContentPane().add(offsetX, "12, 10");
+		
+		JLabel lblNewLabel_1_1_3_1 = new JLabel("y");
+		lblNewLabel_1_1_3_1.setHorizontalAlignment(SwingConstants.TRAILING);
+		frame.getContentPane().add(lblNewLabel_1_1_3_1, "14, 10");
+		offsetY.setModel(new SpinnerNumberModel(new Double(0), new Double(0), null, new Double(1)));
+		offsetY.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				updatePreview();
+			}
+		});
+
+		frame.getContentPane().add(offsetY, "16, 10");
+		
+		JLabel lblNewLabel_1_1_2_1 = new JLabel("Rotation (°):");
+		frame.getContentPane().add(lblNewLabel_1_1_2_1, "6, 12, 3, 1");
+		rotation.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				updatePreview();
+			}
+		});
+		
+		frame.getContentPane().add(rotation, "10, 12, 7, 1");
+		frame.getContentPane().add(btnSave, "4, 16, fill, top");
 		
 		panel = new PhotonLayerImage(layer.getImage().getWidth(), layer.getImage().getHeight());
 		
-		frame.getContentPane().add(panel, "2, 2, 3, 8, fill, top");
+		frame.getContentPane().add(panel, "2, 2, 3, 12, fill, top");
 		
 		JButton btnCancel = new JButton("Cancel");
-		frame.getContentPane().add(btnCancel, "2, 12, fill, top");
+		frame.getContentPane().add(btnCancel, "2, 16, fill, top");
 		
 		JLabel lblNewLabel_1 = new JLabel("Preset");
 		frame.getContentPane().add(lblNewLabel_1, "6, 2, fill, fill");
@@ -136,18 +181,18 @@ public class Exporter {
 		JComboBox comboBox = new JComboBox();
 		comboBox.setEditable(true);
 		frame.getContentPane().add(comboBox, "8, 2, 7, 1, fill, fill");
-		chckbxNewCheckBox.addActionListener(new ActionListener() {
+		mirrorLayer.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				setLayer(layer.getImage());
+				updatePreview();
 			}
 		});
-		frame.getContentPane().add(chckbxNewCheckBox, "12, 8, 7, 1, fill, top");
+		frame.getContentPane().add(mirrorLayer, "12, 8, 7, 1, fill, top");
 		
 		JLabel lblNewLabel_1_1 = new JLabel("Material Type");
 		frame.getContentPane().add(lblNewLabel_1_1, "6, 6, 3, 1, fill, fill");
 		typeBox.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				setLayer(layer.getImage());
+				updatePreview();
 			}
 		});
 		
@@ -157,7 +202,7 @@ public class Exporter {
 		DefaultComboBoxModel<LayerListObject> temp = new DefaultComboBoxModel<LayerListObject>();
 		drillOLBox.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				setLayer(layer.getImage());
+				updatePreview();
 			}
 		});
 		drillOLBox.setModel(temp);
@@ -165,31 +210,31 @@ public class Exporter {
 		for(int i = 0; i< Main.frame.list.getModel().getSize();i++){
 			temp.addElement(Main.frame.list.getModel().getElementAt(i));
         }
-		frame.getContentPane().add(drillOLBox, "12, 10, 7, 1, fill, top");
+		frame.getContentPane().add(drillOLBox, "12, 14, 7, 1, fill, top");
 		
 		JLabel lblNewLabel_1_1_1 = new JLabel("Add drill guide");
-		frame.getContentPane().add(lblNewLabel_1_1_1, "6, 10, 5, 1, fill, fill");
+		frame.getContentPane().add(lblNewLabel_1_1_1, "6, 14, 5, 1, fill, fill");
 		chckbxOverrideHoleDiameter.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				setLayer(layer.getImage());
+				updatePreview();
 				newHoleDiam.setEnabled(chckbxOverrideHoleDiameter.isSelected());
 				newHoleDiamMMLBL.setEnabled(chckbxOverrideHoleDiameter.isSelected());
 			}
 		});
-		frame.getContentPane().add(chckbxOverrideHoleDiameter, "6, 12, 7, 1, fill, top");
+		frame.getContentPane().add(chckbxOverrideHoleDiameter, "6, 16, 7, 1, fill, top");
 		newHoleDiam.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
-				setLayer(layer.getImage());
+				updatePreview();
 			}
 		});
 		newHoleDiam.setModel(new SpinnerNumberModel(0.5, 0.1, 100.0, 0.1));
 		
 		
 		newHoleDiam.setEnabled(false);
-		frame.getContentPane().add(newHoleDiam, "14, 12, 3, 1, fill, center");
+		frame.getContentPane().add(newHoleDiam, "14, 16, 3, 1, fill, center");
 		
 		newHoleDiamMMLBL.setEnabled(false);
-		frame.getContentPane().add(newHoleDiamMMLBL, "18, 12, fill, fill");
+		frame.getContentPane().add(newHoleDiamMMLBL, "18, 16, fill, fill");
 		
 		JButton btnNewButton = new JButton("+");
 		frame.getContentPane().add(btnNewButton, "16, 2, 3, 1, right, top");
@@ -199,7 +244,12 @@ public class Exporter {
 		
 		JLabel lblS = new JLabel("s");
 		frame.getContentPane().add(lblS, "18, 4, fill, fill");
-		setLayer(layer.getImage());
+		updatePreview();
+	}
+	
+	public void updatePreview() {
+		layer.applyCorrection((double) offsetX.getValue(), (double) offsetY.getValue(), (int) rotation.getValue());
+		setLayer(layer.getCorrectedImage());
 	}
 	
 	public void setLayer(BufferedImage data) {
@@ -208,14 +258,13 @@ public class Exporter {
 		AffineTransform flipper = new AffineTransform();
 		
 		if(drillOLBox.getSelectedIndex() > 0) {
-			double newHoleSize = (double) newHoleDiam.getValue() / 25.4;	//gerber lib talks imperial
+			double newHoleSize = (double) newHoleDiam.getValue() / 25.4;	//gerber lib talks imperial :(
 			flipped = Main.frame.list.getModel().getElementAt(drillOLBox.getSelectedIndex() - 1).gerber.overlayDrills(flipped, chckbxOverrideHoleDiameter.isSelected() ? newHoleSize : -1, Main.currPrinter.getScreenPPI().getWidth(), Main.currPrinter.getScreenPPI().getHeight(), Main.currPrinter.getScreenResolution().width, Main.currPrinter.getScreenResolution().height);
 		}
 		
-		if(chckbxNewCheckBox.isSelected()) {
+		if(mirrorLayer.isSelected()) {
 			flipper.scale(-1, 1); flipper.translate(-flipped.getWidth(), 0);
 		}
-		
 
 		AffineTransformOp dolphin = new AffineTransformOp(flipper, AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
 		flipped = dolphin.filter(flipped, null);
@@ -224,7 +273,7 @@ public class Exporter {
 		BufferedImage out = new BufferedImage(data.getWidth(), data.getHeight(), data.getType());
 		Graphics2D outDrawer = out.createGraphics();
 		Dimension margin = Main.currPrinter.getBezelMargin();
-		outDrawer.drawImage(flipped, (int) (chckbxNewCheckBox.isSelected() ? -margin.getWidth() : margin.getWidth()), (int) margin.getHeight(), null);
+		outDrawer.drawImage(flipped, (int) (mirrorLayer.isSelected() ? -margin.getWidth() : margin.getWidth()), (int) margin.getHeight(), null);
 		outDrawer.dispose();
 		
 		PhotonFileLayer layer = new PhotonFileLayer(out, invert, exp.getPhotonFileHeader());
@@ -236,7 +285,7 @@ public class Exporter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		panel.drawLayer(exp.getLayer(0), 10);
+		panel.drawLayer(exp.getLayer(0), 0);
 		frame.update(frame.getGraphics());
 	}
 	
@@ -247,7 +296,7 @@ public class Exporter {
 		AffineTransform flipper = new AffineTransform();
 		
 		//flipper.translate((int) xMargin.getValue(), (int) yMargin.getValue());
-		if(chckbxNewCheckBox.isSelected()) {
+		if(mirrorLayer.isSelected()) {
 			flipper.scale(-1, 1); flipper.translate(flipper.getTranslateX() - layer.getImage().getWidth(), flipper.getTranslateY());
 		}
 		

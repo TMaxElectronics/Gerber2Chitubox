@@ -15,7 +15,7 @@ public class ElegooMars implements Printer {
 	@Override
 	public Dimension getBezelMargin() {
 		Dimension ret = new Dimension();
-		ret.setSize(35, 35);
+		ret.setSize(10, 10);
 		return ret;
 	}
 

@@ -83,7 +83,7 @@ public class GerberLoader{
   private static final int      RENDER_FILLED = 2;
   private static final int      RENDER_OUTLINE = 3;
   // Internal scaling parameters
-  private static final double   renderScale = 10;   // scales up Shapes to improve render
+  public static final double    renderScale = 10;   // scales up Shapes to improve render
   private static double         defaultViewScale = 4.0;
   private static final int      pixelGap = 4;       // Adds border around displayed image
   // State machine variables
@@ -118,6 +118,7 @@ public class GerberLoader{
   private List<DrawItem> drawItems;   // Gerber ordered List of shapes used to draw PCB
   private File ourFile;
   private BufferedImage img = null;
+  private AffineTransform correctionTransform = null;
   
   private boolean toolOn = false;
 
@@ -165,6 +166,17 @@ public class GerberLoader{
   		return img;
   	}
   	
+	public void applyCorrection(double xOffset, double yOffset, int angle) {
+		correctionTransform = new AffineTransform();
+		correctionTransform.translate(xOffset / 25.4 * renderScale, yOffset / 25.4 * -renderScale);
+		correctionTransform.rotate(Math.toRadians(angle), PositionManager.getMinX(), PositionManager.getMinY());
+	}
+  	
+  	public BufferedImage getCorrectedImage() {
+  		img = getBoardImage(Main.currPrinter.getScreenPPI().getWidth(), Main.currPrinter.getScreenPPI().getHeight(), Main.currPrinter.getScreenResolution().width, Main.currPrinter.getScreenResolution().height, correctionTransform);
+  		return img;
+  	}
+  	
   	public void setFile(File newFile) {
   		ourFile = newFile;
   		img = null;
@@ -193,6 +205,10 @@ public class GerberLoader{
   	}
   	
   	private BufferedImage getBoardImage (double ppiX, double ppiY, int width, int height) {
+  		return getBoardImage(ppiX, ppiY, width, height, null);
+  	}
+  	
+  	private BufferedImage getBoardImage (double ppiX, double ppiY, int width, int height, AffineTransform at) {
   		double scaleX = ppiX / renderScale, scaleY = ppiY / renderScale;
   		BufferedImage bufImg = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
   		Graphics2D offScr = (Graphics2D) bufImg.getGraphics();
@@ -201,15 +217,21 @@ public class GerberLoader{
 		double minX = PositionManager.getMinX();
 		double minY = PositionManager.getMinY();
 		double heightMax = PositionManager.getHeight();
+		
+		AffineTransform scaler = new AffineTransform();
+		scaler.scale(scaleX, -scaleY);
+		scaler.translate(-minX, -heightMax);
+			
   		for (DrawItem item : drawItems) {
-      // 	Invert Y axis to match Java Graphics's upper-left origin
-  			AffineTransform at = new AffineTransform();
-  			at.scale(scaleX, -scaleY);
-  			at.translate(-minX, -heightMax);
+  			//Invert Y axis to match Java Graphics's upper-left origin
   			
-  			Shape shape = at.createTransformedShape(item.shape);
+  			Shape shape =  null;
+  			if(at != null) {
+  	  			shape = scaler.createTransformedShape(at.createTransformedShape(item.shape));
+  			}else {
+  	  			shape = scaler.createTransformedShape(item.shape);
+  			}
   			
-			//offScr.setStroke(new BasicStroke(3));
   			if(item.drawCopper) {
   				offScr.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC));
   			}else {
@@ -300,7 +322,7 @@ public class GerberLoader{
 	}
 
   // TODO: can this be improved?
-  	private Area getBoardArea () {
+  	private Area getBoardArea() {
   		Area pcb = new Area();
   		int count = 0;
   		for (DrawItem item : drawItems) {
@@ -959,32 +981,33 @@ public class GerberLoader{
 	   * @param x2 x coord of end point
 	   * @param y2 y coord of end point
 	   */
-	  private void interpolateAperture (Aperture app, double x1, double y1, double x2, double y2) {
-	    x1 = dX(x1);
-	    y1 = dY(y1);
-	    x2 = dX(x2);
-	    y2 = dY(y2);
-	    if (app.type == CIRCLE) {
-	      double diam = dW(app.parms.get(0));
-	      BasicStroke s1 = new BasicStroke((float) diam, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-	      addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
-	      addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
-	    } else if (app.type == RECTANGLE) {
-	      double wid = dW(app.parms.get(0));
-	      double hyt = dH(app.parms.get(1));
-	      double diam = Math.sqrt(wid * wid + hyt * hyt);
-	      BasicStroke s1 = new BasicStroke((float) diam, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
-	      addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
-	      // Draw rectangle at start and end points to simulate Gerber's rectangular interpolation
-	      addToBoard(new Rectangle2D.Double(x1 - wid / 2, y1 - hyt / 2, wid, hyt), isDark);
-	      addToBoard(new Rectangle2D.Double(x2 - wid / 2, y2 - hyt / 2, wid, hyt), isDark);
-	    } else {
-	      System.out.println("interpolateAperture() Aperture type = " + app.type + " not implemented, exposure is " + (isDark ? "DRK" : "CLR"));
-	      for (double val : app.parms) {
-	        System.out.print("  " + val);
-	      }
-	      System.out.println();
-	    }
-	  }
+	private void interpolateAperture (Aperture app, double x1, double y1, double x2, double y2) {
+		x1 = dX(x1);
+		y1 = dY(y1);
+		x2 = dX(x2);
+		y2 = dY(y2);
+		if (app.type == CIRCLE) {
+		  double diam = dW(app.parms.get(0));
+		  BasicStroke s1 = new BasicStroke((float) diam, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+		  addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
+		  addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
+		} else if (app.type == RECTANGLE) {
+		  double wid = dW(app.parms.get(0));
+		  double hyt = dH(app.parms.get(1));
+		  double diam = Math.sqrt(wid * wid + hyt * hyt);
+		  BasicStroke s1 = new BasicStroke((float) diam, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
+		  addToBoard(s1.createStrokedShape(new Line2D.Double(x1, y1, x2, y2)), isDark);
+		  // Draw rectangle at start and end points to simulate Gerber's rectangular interpolation
+		  addToBoard(new Rectangle2D.Double(x1 - wid / 2, y1 - hyt / 2, wid, hyt), isDark);
+		  addToBoard(new Rectangle2D.Double(x2 - wid / 2, y2 - hyt / 2, wid, hyt), isDark);
+		} else {
+		  System.out.println("interpolateAperture() Aperture type = " + app.type + " not implemented, exposure is " + (isDark ? "DRK" : "CLR"));
+		  for (double val : app.parms) {
+		    System.out.print("  " + val);
+		      }
+		      System.out.println();
+	    	}
+	}
+
   	
 }
