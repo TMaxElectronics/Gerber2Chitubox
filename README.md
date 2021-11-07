@@ -8,6 +8,8 @@ It currently only supports the scaling for the elegoo mars (infact only MY print
 # IT'S ALIIIVE :D
 After initial testing suggested this project was dead, I spent some more time and who would have thought... it actually does work out very well :)
 
+The G2C.jar binary a runnable jar file of the software if you want to give it a shot :)
+
 # Required printer modifications
 By default the printers lcd has a glass pane infront of it for protection and likely flatness too. This however reduces exposure accuracy a lot (more like 0.4mm/15mil process) because of the lamp geometry. To fix this you will have to remove the peice of glass. 
 
