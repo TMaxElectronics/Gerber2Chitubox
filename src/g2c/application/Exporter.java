@@ -110,7 +110,7 @@ public class Exporter {
 		
 		JLabel lblNewLabel = new JLabel("Exposure Time:");
 		frame.getContentPane().add(lblNewLabel, "6, 4, 7, 1, fill, fill");
-		expTime.setModel(new SpinnerNumberModel(10, 10, 1000, 10));
+		expTime.setModel(new SpinnerNumberModel(250, 10, 1000, 10));
 		
 		frame.getContentPane().add(expTime, "14, 4, 3, 1, fill, fill");
 		
@@ -136,7 +136,7 @@ public class Exporter {
 		JLabel lblNewLabel_1_1_3 = new JLabel("x");
 		lblNewLabel_1_1_3.setHorizontalAlignment(SwingConstants.TRAILING);
 		frame.getContentPane().add(lblNewLabel_1_1_3, "10, 10");
-		offsetX.setModel(new SpinnerNumberModel(new Double(0), new Double(0), null, new Double(1)));
+		offsetX.setModel(new SpinnerNumberModel(new Double(1.45), new Double(0), null, new Double(1)));
 		offsetX.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				updatePreview();
@@ -148,7 +148,7 @@ public class Exporter {
 		JLabel lblNewLabel_1_1_3_1 = new JLabel("y");
 		lblNewLabel_1_1_3_1.setHorizontalAlignment(SwingConstants.TRAILING);
 		frame.getContentPane().add(lblNewLabel_1_1_3_1, "14, 10");
-		offsetY.setModel(new SpinnerNumberModel(new Double(0), new Double(0), null, new Double(1)));
+		offsetY.setModel(new SpinnerNumberModel(new Double(2.1), new Double(0), null, new Double(1)));
 		offsetY.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				updatePreview();
@@ -249,6 +249,9 @@ public class Exporter {
 	
 	public void updatePreview() {
 		layer.applyCorrection((double) offsetX.getValue(), (double) offsetY.getValue(), (int) rotation.getValue());
+		if(drillOLBox.getSelectedIndex() > 0) {
+			Main.frame.list.getModel().getElementAt(drillOLBox.getSelectedIndex() - 1).gerber.applyCorrection((double) offsetX.getValue(), (double) offsetY.getValue(), (int) rotation.getValue());
+		}
 		setLayer(layer.getCorrectedImage());
 	}
 	
@@ -259,7 +262,7 @@ public class Exporter {
 		
 		if(drillOLBox.getSelectedIndex() > 0) {
 			double newHoleSize = (double) newHoleDiam.getValue() / 25.4;	//gerber lib talks imperial :(
-			flipped = Main.frame.list.getModel().getElementAt(drillOLBox.getSelectedIndex() - 1).gerber.overlayDrills(flipped, chckbxOverrideHoleDiameter.isSelected() ? newHoleSize : -1, Main.currPrinter.getScreenPPI().getWidth(), Main.currPrinter.getScreenPPI().getHeight(), Main.currPrinter.getScreenResolution().width, Main.currPrinter.getScreenResolution().height);
+			flipped = Main.frame.list.getModel().getElementAt(drillOLBox.getSelectedIndex() - 1).gerber.overlayDrills(flipped, chckbxOverrideHoleDiameter.isSelected() ? newHoleSize : -1, Main.currPrinter.getScreenPPI().getWidth(), Main.currPrinter.getScreenPPI().getHeight(), Main.currPrinter.getScreenResolution().width, Main.currPrinter.getScreenResolution().height, true);
 		}
 		
 		if(mirrorLayer.isSelected()) {

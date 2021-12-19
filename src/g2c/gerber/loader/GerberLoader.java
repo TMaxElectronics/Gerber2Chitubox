@@ -243,7 +243,7 @@ public class GerberLoader{
   		return bufImg;
   	}
   	
-  	public BufferedImage overlayDrills (BufferedImage bufImg, double newHoleSize, double ppiX, double ppiY, int width, int height) {
+  	public BufferedImage overlayDrills (BufferedImage bufImg, double newHoleSize, double ppiX, double ppiY, int width, int height, boolean applyCorrection) {
   		double scaleX = ppiX / renderScale, scaleY = ppiY / renderScale;
   		Graphics2D offScr = (Graphics2D) bufImg.getGraphics();
   		offScr.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -251,11 +251,13 @@ public class GerberLoader{
 		double minX = PositionManager.getMinX();
 		double minY = PositionManager.getMinY();
 		double heightMax = PositionManager.getHeight();
+		
+		AffineTransform scaler = new AffineTransform();
+		scaler.scale(scaleX, -scaleY);
+		scaler.translate(-minX, -heightMax);
+  			
   		for (DrawItem item : drawItems) {
       // 	Invert Y axis to match Java Graphics's upper-left origin
-  			AffineTransform at = new AffineTransform();
-  			at.scale(scaleX, -scaleY);
-  			at.translate(-minX, -heightMax);
 
   			if(newHoleSize > 0) {
   				if(item.drawCopper) {
@@ -265,7 +267,13 @@ public class GerberLoader{
 		  				double centerX = frame.getCenterX();
 		  				double centerY = frame.getCenterY();
 		  				double r = renderScale * newHoleSize;
-		  				Shape shape = at.createTransformedShape(new Ellipse2D.Double(centerX - r, centerY - r, r*2, r*2));
+		  				
+		  				Shape shape;
+		  				if(correctionTransform != null && applyCorrection) {
+			  				shape = scaler.createTransformedShape(correctionTransform.createTransformedShape(new Ellipse2D.Double(centerX - r, centerY - r, r*2, r*2)));
+		  				}else {
+		  					shape = scaler.createTransformedShape(new Ellipse2D.Double(centerX - r, centerY - r, r*2, r*2));
+		  				}
 		  				
 		  	  			offScr.setComposite(AlphaComposite.Clear);
 	  	  				offScr.fill(shape);
@@ -273,7 +281,14 @@ public class GerberLoader{
   				}
   			}else {
   				if(item.drawCopper) {
-  		  			Shape shape = at.createTransformedShape(item.shape);
+	  				Shape shape;
+	  				
+	  				if(correctionTransform != null && applyCorrection) {
+		  				shape = scaler.createTransformedShape(correctionTransform.createTransformedShape(item.shape));
+	  				}else {
+	  					shape = scaler.createTransformedShape(item.shape);
+	  				}
+	  				
   	  				offScr.setComposite(AlphaComposite.Clear);
   	  				offScr.fill(shape);
   	  				//offScr.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC));
